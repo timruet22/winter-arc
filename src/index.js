@@ -44,8 +44,8 @@ async function authed(req, env) {
   const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(\S+)$/i);
   if (!m) return null;
   const hash = await sha256(m[1]);
-  const row = await env.DB.prepare("SELECT id, name, is_admin FROM players WHERE token_hash = ?").bind(hash).first();
-  return row ? { id: row.id, name: row.name, admin: !!row.is_admin } : null;
+  const row = await env.DB.prepare("SELECT id, name, is_admin, pending_action FROM players WHERE token_hash = ?").bind(hash).first();
+  return row ? { id: row.id, name: row.name, admin: !!row.is_admin, pending: row.pending_action || null } : null;
 }
 
 const cleanName = (n) => String(n || "").trim().slice(0, 24);
@@ -121,6 +121,12 @@ async function handleApi(req, env, path) {
         public: r.public_json ? JSON.parse(r.public_json) : null,
       })),
     });
+  }
+
+  // The app confirms it has run a one-time action
+  if (path === "/api/ack" && method === "POST") {
+    await env.DB.prepare("UPDATE players SET pending_action = NULL WHERE id = ?").bind(me.id).run();
+    return json({ ok: true });
   }
 
   // Leave the Winter Arc: deletes your own data and your place

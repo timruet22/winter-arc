@@ -201,7 +201,9 @@ const nowDate = () => { if(!simDate) return new Date(); const d=parse(simDate); 
 
 // ---------- state ----------
 const uid8 = () => Math.random().toString(36).slice(2,10);
-function freshState(name){
+function freshState(name, withDefaults=false){
+  if (!withDefaults) return { v:1, name, createdAt: today(), habits:[], logs:{}, penalties:[],
+    nnn:{joined:true, days:[], failedAt:null, punish:null}, share:{streak:true, penalties:true, nnn:true} };
   return { v:1, name, createdAt: today(),
     habits:[
       {id:"gym", name:"Gym", target:4, penalty:100, share:true, start: firstWeek(today())},
@@ -394,6 +396,12 @@ async function loadMine(){
   if (st.enc) S = JSON.parse(await decrypt(st.enc));
   else if (st.seed) S = st.seed;
   else S = freshState(info.name);
+  if (info.pending==="clear_defaults"){
+    const drop = new Set(["gym","kreatin"]);
+    S.habits = S.habits.filter(h=>!drop.has(h.id)); for (const k of drop) delete S.logs[k];
+    S.penalties = S.penalties.filter(p=>!drop.has(p.habitId));
+    api("POST","/api/ack").catch(()=>{});
+  }
   evaluate(); save(); render(); startPolling();
 }
 async function bootApi(){
@@ -453,7 +461,7 @@ function demoFriend(){
     penalty:{habit:"Kreatin", reps:100, done:40, exercise:"Sit-ups"}, penaltiesDone:1, totals:{"Liegestütze":140, "Sit-ups":50}, nnn:{key:"wait", text:"Startet am 1.11."} };
 }
 function seedLocal(){
-  const s = freshState("Tim");
+  const s = freshState("Tim", true);
   const cur = mondayOf(today());
   s.habits.forEach(h=> h.start = addDays(cur,-21));
   const t = today(); const pick = (offs) => offs.map(o=>addDays(cur,o)).filter(k=>k<=t);
@@ -533,15 +541,24 @@ function nnnBanner(){
   <button class="btn ghost small" data-tab="nnn">Zur NNN-Strafe</button></div>`;
 }
 
+const SUGGEST = [["Gym",4],["Kreatin",7],["Laufen",2],["Kalt duschen",7],["Lesen",5],["Kein Alkohol",7],["10k Schritte",5],["Früh aufstehen",5]];
+function startCard(){
+  const have = new Set(S.habits.map(h=>h.name.toLowerCase()));
+  return `<div class="card stack"><div><div class="habit-name">Was ziehst du durch?</div>
+    <div class="muted">Tipp an, was du willst. Ziel, Strafe und Sichtbarkeit änderst du danach unter „Ich“. Strafen zählen ab der ersten vollen Woche.</div></div>
+    <div class="row">${SUGGEST.filter(([n])=>!have.has(n.toLowerCase())).map(([n,t])=>`<button class="btn ghost small" data-suggest="${esc(n)}" data-t="${t}">+ ${esc(n)} · ${t}×/Woche</button>`).join("")}</div>
+    <div><button class="btn small" data-tab="ich">Eigene Gewohnheit anlegen</button></div></div>`;
+}
+
 function renderHeute(){
   const p = openPenalty();
   const cur = mondayOf(today());
   const daysLeft = 6 - diffDays(cur, today());
-  app.innerHTML = header(`Woche läuft noch ${daysLeft===0?"bis heute Nacht":daysLeft+" Tage"}`) +
+  app.innerHTML = header(`Woche läuft noch ${daysLeft===0?"bis heute Nacht":daysLeft+(daysLeft===1?" Tag":" Tage")}`) +
     `<div class="stack ${p?"locked":""}">
       ${p?penaltyCard(p):""}
       ${nnnBanner()}
-      ${S.habits.map(h=>habitCard(h,!!p)).join("") || '<div class="card muted">Noch keine Gewohnheiten. Leg unter „Ich“ welche an.</div>'}
+      ${S.habits.map(h=>habitCard(h,!!p)).join("") || startCard()}
     </div>
     <h2>Strafen-Historie</h2>
     <div class="card">${historyList()}</div>`;
@@ -743,7 +760,7 @@ function renderOnboarding(){
   document.getElementById("tabs").innerHTML = "";
   app.innerHTML = `<div class="onb"><div class="brand" style="font-size:3.4rem">Winter<br>Arc<small>Gym, Kreatin, No Nut November. Wer schwächelt, macht Liegestütze.</small></div>
   <div class="card stack"><div class="field"><label class="label" for="onbName">Wie heißt du?</label><input id="onbName" maxlength="24" placeholder="Tim" autocomplete="nickname"></div>
-  <div class="muted">Start mit Gym 4× und Kreatin 7× pro Woche, je 100 Liegestütze Strafe. Kannst du später ändern.</div>
+  <div class="muted">Danach suchst du dir aus, was du durchziehen willst.</div>
   <button class="btn" id="onbGo">Arc starten</button></div></div>`;
   document.getElementById("onbGo").onclick = () => {
     const name = document.getElementById("onbName").value.trim() || "Ich";
@@ -794,6 +811,10 @@ app.addEventListener("click", e => {
   }
   if (t.id==="logoutYes"){ ui.logoutConfirm=false; ui.showToken=false; setToken(null); try{localStorage.removeItem("wa-cache")}catch(_){} S=null; me=null; others=[]; clearInterval(pollT); bootApi(); return; }
   if (t.dataset.tab){ tab=t.dataset.tab; render(); window.scrollTo(0,0); return; }
+  if (t.dataset.suggest){
+    const id = uid8(); S.habits.push({id, name:t.dataset.suggest, target:Number(t.dataset.t), penalty:100, share:true, start:firstWeek(today())}); S.logs[id]=[];
+    toast(`${t.dataset.suggest} hinzugefügt.`); return commit();
+  }
   if (t.dataset.log){
     if (openPenalty()) return toast("Erst die Strafe abarbeiten.");
     const h = S.habits.find(x=>x.id===t.dataset.log); const arr = logsOf(h); const k=t.dataset.day;
