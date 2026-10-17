@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1320">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Winter Arc">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Winter Arc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-column phone app, fixed bottom tab bar, cards only for habits/penalties */
+:root{
+  --bg:#0b1320; --surface:#121d2e; --surface2:#182740; --line:#24364f;
+  --fg:#e9f0f8; --muted:#8597b0; --ice:#8fd3ff; --ice-ink:#062033;
+  --ember:#ff7a45; --ember-soft:rgba(255,122,69,.14); --good:#6fe0a8; --good-soft:rgba(111,224,168,.13);
+  --display:"Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body:"Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:14px calc(96px + env(safe-area-inset-bottom,0px))}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:6px 14px}
+.brand{font-family:var(--display);font-weight:900;font-size:2.4rem;line-height:.9;letter-spacing:.01em;text-transform:uppercase}
+.brand small{display:block;font-family:var(--body);font-weight:600;font-size:.72rem;letter-spacing:.14em;color:var(--muted);margin-top:6px}
+.weekchip{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ice);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.banner{font-size:.85rem;color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px}
+.banner b{color:var(--fg)}
+h2{font-family:var(--display);font-weight:800;font-size:1.5rem;text-transform:uppercase;letter-spacing:.02em;margin:22px 0 10px;text-wrap:balance}
+.label{font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stack{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.habit-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.habit-name{font-weight:700;font-size:1.1rem}
+.count{font-family:var(--display);font-weight:900;font-size:2.6rem;line-height:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
+.count span{color:var(--muted);font-weight:600;font-size:1.6rem}
+.count.hit{color:var(--good)}
+.bar{height:6px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:12px 0}
+.bar i{display:block;height:100%;background:var(--ice);border-radius:6px;transition:width .3s}
+.bar.hit i{background:var(--good)}
+.bar.ember i{background:var(--ember)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{display:grid;place-items:center;gap:2px;aspect-ratio:1/1.15;max-width:100%;border-radius:10px;border:1px solid var(--line);background:transparent;font-size:.7rem;color:var(--muted);padding:0}
+.day b{font-family:var(--display);font-size:1.15rem;color:var(--fg);font-weight:800}
+.day.on{background:var(--ice);border-color:var(--ice);color:var(--ice-ink)}
+.day.on b{color:var(--ice-ink)}
+.day.today{border-color:var(--ice)}
+.day:disabled{opacity:.35;cursor:default}
+.day.on:disabled{opacity:1}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:.82rem;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;background:var(--surface2);color:var(--fg);font-size:.8rem;font-weight:600}
+.pill.fire{color:#ffb07f}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.bad{background:var(--ember-soft);color:var(--ember)}
+.pill svg{width:13px;height:13px}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--ice);color:var(--ice-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.btn.ember{background:var(--ember);color:#250b00}
+.btn.small{padding:8px 12px;font-size:.88rem;border-radius:10px}
+.btn:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>.grow{flex:1 1 120px;min-width:0}
+
+/* penalty */
+.penalty{border-color:var(--ember);background:linear-gradient(180deg,var(--ember-soft),transparent 70%),var(--surface)}
+.penalty .big{font-family:var(--display);font-weight:900;font-size:4.2rem;line-height:.85;color:var(--ember);font-variant-numeric:tabular-nums}
+.penalty .big span{font-size:2rem;color:var(--muted)}
+.lockmsg{display:flex;gap:10px;align-items:center;font-weight:600;margin:4px 0 12px}
+.lockmsg svg{flex:none;width:20px;height:20px;color:var(--ember)}
+.locked .days{pointer-events:none;opacity:.35}
+
+/* squad */
+.person{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-size:1.4rem;background:var(--surface2);color:var(--ice);flex:none}
+.person .nm{font-weight:700;font-size:1.15rem}
+.mini{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.mini .c{font-family:var(--display);font-weight:800;font-size:1.4rem;font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:4px;grid-column:1/-1}
+.dots i{width:100%;height:5px;border-radius:3px;background:var(--surface2)}
+.dots i.on{background:var(--ice)}
+.tag{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+
+/* NNN */
+.nnn-hero{text-align:left;padding:22px 18px}
+.cd{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0 6px}
+.cd div{background:var(--surface2);border-radius:12px;padding:10px 4px;text-align:center}
+.cd b{display:block;font-family:var(--display);font-weight:900;font-size:2.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.cd span{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.quote{font-family:var(--display);font-weight:800;font-size:1.9rem;line-height:1.05;text-transform:uppercase;text-wrap:balance;margin:10px 0 16px}
+.month{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}
+.month button{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:transparent;font-family:var(--display);font-weight:800;font-size:1rem;color:var(--muted);padding:0}
+.month button.ok{background:var(--good);border-color:var(--good);color:#06301c}
+.month button.fail{background:var(--ember);border-color:var(--ember);color:#250b00}
+.month button.today{border-color:var(--ice);color:var(--fg)}
+.month button:disabled{cursor:default}
+.rules{margin:0;padding-left:18px;color:var(--muted);font-size:.92rem;display:grid;gap:4px}
+.rules b{color:var(--fg)}
+.badge{display:flex;gap:14px;align-items:center}
+.badge svg{width:64px;height:64px;flex:none}
+.confirm{border:1px solid var(--ember);border-radius:12px;padding:12px;margin-top:10px;background:var(--ember-soft)}
+
+/* settings */
+.field{display:grid;gap:4px}
+.field input,.field select{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.toggle:first-child{border-top:0}
+.switch{position:relative;width:48px;height:28px;flex:none}
+.switch input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer}
+.switch i{position:absolute;inset:0;border-radius:999px;background:var(--surface2);border:1px solid var(--line);transition:.2s;pointer-events:none}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:.2s}
+.switch input:checked+i{background:var(--ice);border-color:var(--ice)}
+.switch input:checked+i::after{left:23px;background:var(--ice-ink)}
+.switch input:focus-visible+i{outline:2px solid var(--ice);outline-offset:2px}
+.hedit{display:grid;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.hedit:first-of-type{border-top:0}
+.hedit .g3{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.hedit .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hedit .g2>*,.hedit .g3>*{min-width:0}
+.tots{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:8px}
+.tots b{display:block;font-family:var(--display);font-weight:900;font-size:3rem;line-height:.9;color:var(--ember);font-variant-numeric:tabular-nums}
+.tots span{font-size:.85rem;color:var(--muted);font-weight:600}
+.muted{color:var(--muted);font-size:.88rem}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(11,19,32,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:10}
+body.topnav .tabs{position:sticky;top:env(safe-area-inset-top,0px);bottom:auto;border-top:0;border-bottom:1px solid var(--line);padding:6px 8px}
+body.topnav .app{padding-block:14px 40px}
+body.topnav .toast{position:sticky;display:block;width:max-content;margin:0 auto 16px;bottom:16px;left:auto;transform:none}
+.tabs nav{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px}
+.tab{background:none;border:0;display:grid;justify-items:center;gap:2px;padding:6px 0;color:var(--muted);font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;position:relative}
+.tab svg{width:24px;height:24px}
+.tab[aria-selected="true"]{color:var(--ice)}
+.tab .dot{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--ember)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:20;max-width:calc(100% - 32px)}
+.onb{display:grid;gap:14px;padding-top:30px}
+.tok{display:block;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;background:var(--surface2);border:1px solid var(--line);padding:10px 12px;border-radius:10px;user-select:all;-webkit-user-select:all}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="app" id="app"></div>
+<div class="tabs"><nav id="tabs" role="tablist"></nav></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+// ---------- icons ----------
+const I = {
+  flame:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9v6M18 9v6M3 11v2M21 11v2M6 12h12"/></svg>',
+  squad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17 14.5c2.4 0 4 1.6 4.5 4.5"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>',
+  me:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+  badge:'<svg viewBox="0 0 64 64"><path d="M32 3l7 6 9-1 3 9 8 5-3 9 3 9-8 5-3 9-9-1-7 6-7-6-9 1-3-9-8-5 3-9-3-9 8-5 3-9 9 1z" fill="#6fe0a8"/><circle cx="32" cy="32" r="16" fill="#0b1320"/><text x="32" y="38" text-anchor="middle" font-family="Big Shoulders Display, Impact, sans-serif" font-weight="900" font-size="16" fill="#6fe0a8">NNN</text></svg>',
+  badgeOff:'<svg viewBox="0 0 64 64"><path d="M32 3l7 6 9-1 3 9 8 5-3 9 3 9-8 5-3 9-9-1-7 6-7-6-9 1-3-9-8-5 3-9-3-9 8-5 3-9 9 1z" fill="none" stroke="#24364f" stroke-width="2"/><text x="32" y="38" text-anchor="middle" font-family="Big Shoulders Display, Impact, sans-serif" font-weight="900" font-size="16" fill="#24364f">NNN</text></svg>'
+};
+const QUOTES = [
+ "Tag 1. Der Winter gehört dir.","Disziplin ist, wenn keiner zuschaut.","Kein Bock ist keine Ausrede.","Wer jetzt aufgibt, hat nie angefangen.",
+ "Kalt draußen. Fokus drinnen.","Eine Woche durch. Weiter.","Dein Freund zählt auf dich.","Kleine Siege, jeden Tag.",
+ "Der Kopf gibt zuerst auf. Nicht du.","Ein Drittel ist geschafft.","Komfort ist der Gegner.","Bleib langweilig. Bleib stark.",
+ "Heute ist kein Tag für Ausnahmen.","Zwei Wochen. Spürst du es?","Halbzeit. Jetzt erst recht.","Energie in Training stecken.",
+ "Du bist nicht wie vorher.","Ruhig bleiben, weitermachen.","Drei Wochen Charakter.","Lieber 500 Liegestütze vermeiden.",
+ "Die letzten Meter zählen doppelt.","Niemand erinnert sich an Ausreden.","Jeder Tag ist eine Entscheidung.","Fast da. Nicht nachlassen.",
+ "Der Arc zeigt sich im Spiegel.","Fünf Tage. Kopf aus, durchziehen.","Vier noch.","Drei noch. Stolz kommt bald.",
+ "Morgen ist der letzte Tag.","Tag 30. Hol dir das Badge."];
+
+// ---------- dates ----------
+const pad = n => String(n).padStart(2,"0");
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = k => { const [y,m,d]=k.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (k,n) => { const d=parse(k); d.setDate(d.getDate()+n); return keyOf(d); };
+const mondayOf = k => { const d=parse(k); const wd=(d.getDay()+6)%7; d.setDate(d.getDate()-wd); return keyOf(d); };
+const weekDays = mon => Array.from({length:7},(_,i)=>addDays(mon,i));
+const diffDays = (a,b) => Math.round((parse(b)-parse(a))/864e5);
+const isoWeek = k => { const d=parse(k); d.setDate(d.getDate()+3-((d.getDay()+6)%7)); const w1=new Date(d.getFullYear(),0,4); return 1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7); };
+const WD = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+const fmt = k => { const d=parse(k); return `${d.getDate()}.${d.getMonth()+1}.`; };
+
+let simDate = null;
+let realS = null; // real state kept aside while test mode runs
+const today = () => simDate || keyOf(new Date());
+const nowDate = () => { if(!simDate) return new Date(); const d=parse(simDate); const n=new Date(); d.setHours(n.getHours(),n.getMinutes(),n.getSeconds()); return d; };
+
+// ---------- state ----------
+const uid8 = () => Math.random().toString(36).slice(2,10);
+function freshState(name){
+  return { v:1, name, createdAt: today(),
+    habits:[
+      {id:"gym", name:"Gym", target:4, penalty:100, share:true, start: firstWeek(today())},
+      {id:"kreatin", name:"Kreatin", target:7, penalty:100, share:true, start: firstWeek(today())}
+    ],
+    logs:{gym:[], kreatin:[]}, penalties:[],
+    nnn:{joined:true, days:[], failedAt:null, punish:null},
+    share:{streak:true, penalties:true, nnn:true} };
+}
+// a habit counts from the first full week (the week it was created only if created on a Monday)
+function firstWeek(k){ const m=mondayOf(k); return m===k ? m : addDays(m,7); }
+
+let S = null;           // private state
+let mode = "local";     // "local" | "db" (Claude artifact) | "api" (Cloudflare)
+let me = null;          // user id
+let db = null;
+let others = [];        // public docs of other players
+let tab = "heute";
+try { tab = localStorage.getItem("wa-tab") || "heute"; } catch(e){}
+let ui = { nnnConfirm:false, delConfirm:null, exCustom:{}, numCustom:{}, showToken:false, logoutConfirm:false };
+
+// ---------- logic ----------
+const logsOf = h => S.logs[h.id] || (S.logs[h.id]=[]);
+const countIn = (h, mon) => { const set=new Set(weekDays(mon)); return logsOf(h).filter(k=>set.has(k)).length; };
+function weekStreak(h){
+  const cur = mondayOf(today()); let n = countIn(h,cur)>=h.target ? 1 : 0;
+  let w = addDays(cur,-7);
+  while (w >= h.start && countIn(h,w) >= h.target) { n++; w = addDays(w,-7); }
+  return n;
+}
+function dayStreak(h){
+  const set = new Set(logsOf(h)); let d = today(); if(!set.has(d)) d = addDays(d,-1);
+  let n=0; while(set.has(d)){ n++; d=addDays(d,-1); } return n;
+}
+const openPenalty = () => S.penalties.find(p => p.done < p.reps);
+const nnnPunishSum = () => { const P=S.nnn.punish; return P ? Object.values(P.log).reduce((a,b)=>a+b,0) : 0; };
+const EX_PRESETS = ["Liegestütze","Sit-ups"];
+const NUM_PRESETS = [25,50,100,150,200,300];
+const exOf = x => (x && x.exercise) || "Liegestütze";
+function exerciseTotals(){
+  const t = {};
+  for (const p of S.penalties){ if(p.done) t[exOf(p)] = (t[exOf(p)]||0) + p.done; }
+  const nnn = (S.nnn.archived||0) + nnnPunishSum();
+  if (nnn) t["Liegestütze"] = (t["Liegestütze"]||0) + nnn;
+  return t;
+}
+function pushupStats(){
+  const t = exerciseTotals();
+  return { totals:t, nnn:(S.nnn.archived||0)+nnnPunishSum(), done: S.penalties.filter(p=>!p.passed && p.done>=p.reps).length };
+}
+
+function evaluate(){
+  let changed = false; const cur = mondayOf(today());
+  for (const h of S.habits){
+    for (let w=h.start; w<cur; w=addDays(w,7)){
+      if (S.penalties.some(p=>p.habitId===h.id && p.week===w)) continue;
+      const c = countIn(h,w);
+      if (c < h.target){
+        S.penalties.push({id:uid8(), habitId:h.id, habitName:h.name, week:w, count:c, target:h.target, reps:h.penalty, exercise:exOf(h), done:0});
+      } else {
+        S.penalties.push({id:uid8(), habitId:h.id, habitName:h.name, week:w, count:c, target:h.target, reps:0, done:0, passed:true});
+      }
+      changed = true;
+    }
+  }
+  // NNN punishment deadlines
+  const P = S.nnn.punish;
+  if (P && P.status==="open"){
+    const end = addDays(P.start, P.days-1);
+    const sum = Object.values(P.log).reduce((a,b)=>a+b,0);
+    if (sum >= P.total){ P.status="done"; changed=true; }
+    else if (today() > end){
+      if (P.stage===1){ S.nnn.archived = (S.nnn.archived||0) + sum; S.nnn.punish = {stage:2, start:today(), total:1000, days:10, log:{}, status:"open"}; }
+      else { P.status="lost"; }
+      changed = true;
+    }
+  }
+  return changed;
+}
+function nnnPhase(){
+  const t = today(); const y = parse(t).getFullYear();
+  const start = `${y}-11-01`, end = `${y}-11-30`;
+  if (t < start) return {phase:"wait", start, end, year:y};
+  if (t <= end) return {phase:"live", start, end, year:y, day: diffDays(start,t)+1};
+  return {phase:"over", start, end, year:y};
+}
+function nnnStatus(){
+  const ph = nnnPhase(); const n = S.nnn;
+  if (!n.joined) return {key:"out", text:"Nicht dabei"};
+  if (n.failedAt && n.failedAt.slice(0,4)==String(ph.year)) return {key:"failed", text:"Verkackt am "+fmt(n.failedAt)};
+  if (ph.phase==="wait") return {key:"wait", text:"Startet am 1.11."};
+  const confirmed = n.days.filter(k=>k.startsWith(ph.year+"-11")).length;
+  if (ph.phase==="live") return {key:"live", text:`Tag ${ph.day}/30 · ${confirmed} bestätigt`, confirmed};
+  return confirmed>=30 ? {key:"badge", text:"Geschafft · Badge"} : {key:"incomplete", text:`${confirmed}/30 bestätigt`};
+}
+
+function publicView(){
+  const cur = mondayOf(today());
+  const pv = { name:S.name, updated: Date.now(), week: cur, habits:[] };
+  for (const h of S.habits){
+    if (!h.share) continue;
+    const days = weekDays(cur).map(k=>logsOf(h).includes(k));
+    const o = { name:h.name, target:h.target, count:countIn(h,cur), days };
+    if (S.share.streak){ o.weekStreak = weekStreak(h); if(h.target===7) o.dayStreak = dayStreak(h); }
+    pv.habits.push(o);
+  }
+  if (S.share.penalties){
+    const p = openPenalty();
+    pv.penalty = p ? {habit:p.habitName, reps:p.reps, done:p.done, exercise:exOf(p)} : null;
+    pv.penaltiesDone = S.penalties.filter(p=>!p.passed && p.done>=p.reps).length;
+    pv.totals = exerciseTotals();
+    const NP = S.nnn.punish; pv.nnnPunish = NP && NP.status==="open" ? {total:NP.total, done:Object.values(NP.log).reduce((a,b)=>a+b,0), stage:NP.stage} : null;
+  }
+  if (S.share.nnn) pv.nnn = nnnStatus();
+  return pv;
+}
+
+// ---------- persistence ----------
+let saveTimer = null, saving = Promise.resolve();
+function save(){
+  if (simDate) return; // test mode: nothing is saved or shared
+  if (mode==="local"){ try{ localStorage.setItem("wa-state", JSON.stringify(S)); }catch(e){} return; }
+  if (mode==="api"){
+    try{ localStorage.setItem("wa-cache", JSON.stringify(S)); }catch(e){}
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const priv = JSON.stringify(S); const pub = publicView();
+      saving = saving.then(async () => {
+        try { await api("PUT","/api/state",{enc: await encrypt(priv)}); await api("PUT","/api/public",pub); }
+        catch(e){ toast(e.status===401 ? "Zugangscode ungültig. Melde dich neu an." : "Speichern fehlgeschlagen. Kein Internet? Wird beim nächsten Eintrag nochmal versucht."); }
+      });
+    }, 400);
+    return;
+  }
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const priv = JSON.parse(JSON.stringify(S)); const pub = publicView();
+    saving = saving.then(async () => {
+      try {
+        await db.collection("data/users/"+me).doc("state").set(priv);
+        await db.doc("players/"+me).set(pub);
+      } catch(e){ toast(e && e.code==="invalid_argument" ? "Speichern nicht erlaubt: Du brauchst Mitwirkenden-Zugriff." : "Speichern fehlgeschlagen. Versuch's gleich nochmal."); }
+    });
+  }, 500);
+}
+function commit(){ evaluate(); save(); render(); }
+
+// ---------- Cloudflare API ----------
+let token = null; try { token = localStorage.getItem("wa-token"); } catch(e){}
+async function api(method, path, body, tok = token){
+  const r = await fetch(path, { method, cache:"no-store", headers: { "content-type":"application/json", ...(tok ? {authorization:"Bearer "+tok} : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const d = await r.json().catch(()=>({}));
+  if (!r.ok){ const e = new Error(d.error || r.statusText); e.status = r.status; throw e; }
+  return d;
+}
+const toB64 = u8 => { let s=""; for (let i=0;i<u8.length;i+=0x8000) s += String.fromCharCode.apply(null, u8.subarray(i,i+0x8000)); return btoa(s); };
+const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function encKey(){ const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("wa-enc:"+token)); return crypto.subtle.importKey("raw", h, "AES-GCM", false, ["encrypt","decrypt"]); }
+async function encrypt(str){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM", iv}, await encKey(), new TextEncoder().encode(str)));
+  const all = new Uint8Array(12+ct.length); all.set(iv); all.set(ct,12); return toB64(all);
+}
+async function decrypt(b64){
+  const all = fromB64(b64);
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv: all.slice(0,12)}, await encKey(), all.slice(12));
+  return new TextDecoder().decode(pt);
+}
+function setToken(t){ token = t; try { t ? localStorage.setItem("wa-token", t) : localStorage.removeItem("wa-token"); } catch(e){} }
+
+let pollT = null;
+async function poll(){
+  if (mode!=="api" || !token) return;
+  try {
+    const d = await api("GET","/api/players");
+    others = d.players.filter(p => p.id!==me && p.public).map(p => ({ id:p.id, ...p.public, updated:p.updated }));
+    if (S && tab==="squad") render();
+  } catch(e){}
+}
+function startPolling(){
+  poll(); clearInterval(pollT);
+  pollT = setInterval(() => { if (document.visibilityState==="visible") poll(); }, 30000);
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState==="visible") poll(); });
+
+async function loadMine(){
+  const info = await api("GET","/api/me"); me = info.id;
+  const st = await api("GET","/api/state");
+  if (st.enc) S = JSON.parse(await decrypt(st.enc));
+  else if (st.seed) S = st.seed;
+  else S = freshState(info.name);
+  evaluate(); save(); render(); startPolling();
+}
+async function bootApi(){
+  let slots;
+  try { const r = await fetch("/api/slots", {cache:"no-store"}); if (!r.ok) return false; slots = (await r.json()).slots; if (!Array.isArray(slots)) return false; }
+  catch(e){ return false; }
+  mode = "api";
+  if (!token){ renderLogin(slots); return true; }
+  try { await loadMine(); }
+  catch(e){
+    if (e.status===401){ setToken(null); renderLogin(slots); toast("Zugangscode ungültig. Bitte neu anmelden."); return true; }
+    let c=null; try { c = JSON.parse(localStorage.getItem("wa-cache")); } catch(_){}
+    if (c){ S = c; evaluate(); render(); toast("Offline: zeige letzten Stand."); } else { app.innerHTML = '<div class="onb"><div class="card">Keine Verbindung zum Server. Prüf dein Internet und lad neu.</div></div>'; }
+  }
+  return true;
+}
+function renderLogin(slots){
+  document.getElementById("tabs").innerHTML = "";
+  const open = slots.filter(s => !s.claimed);
+  app.innerHTML = `<div class="onb"><div class="brand" style="font-size:3.4rem">Winter<br>Arc<small>Gym, Kreatin, No Nut November. Wer schwächelt, kassiert eine Strafe.</small></div>
+  ${open.length ? `<div class="card stack"><div class="label">Neu hier?</div>
+    <div class="field"><label class="label" for="onbName">Dein Name</label><input id="onbName" maxlength="24" autocomplete="nickname"></div>
+    <div class="row">${open.map(s=>`<button class="btn grow" data-claim="${esc(s.id)}">Platz „${esc(s.name)}“ nehmen</button>`).join("")}</div>
+    <div class="muted">Jeder Platz kann nur einmal vergeben werden. Danach bekommst du deinen Zugangscode.</div></div>` : ""}
+  <div class="card stack"><div class="label">Schon dabei?</div>
+    <div class="field"><label class="label" for="onbCode">Zugangscode</label><input id="onbCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="wa_…"></div>
+    <button class="btn ghost" id="onbLogin">Anmelden</button>
+    <div class="muted">Den Code findest du auf deinem anderen Gerät unter „Ich → Zugang“.</div></div></div>`;
+}
+async function doClaim(slot){
+  const name = (document.getElementById("onbName")?.value || "").trim();
+  if (!name) return toast("Gib zuerst deinen Namen ein.");
+  try {
+    const d = await api("POST","/api/claim",{slot,name},null);
+    setToken(d.token); ui.showToken = true; tab = "ich";
+    await loadMine(); if (S.name!==name){ S.name = name; save(); render(); }
+    toast("Willkommen, "+name+"! Speicher dir deinen Code.");
+  } catch(e){ toast(e.status===409 ? "Der Platz ist schon vergeben." : "Hat nicht geklappt. Versuch's nochmal."); }
+}
+async function doLogin(){
+  const code = (document.getElementById("onbCode")?.value || "").trim();
+  if (!code) return toast("Gib deinen Zugangscode ein.");
+  setToken(code);
+  try { await loadMine(); toast("Angemeldet."); }
+  catch(e){ setToken(null); toast(e.status===401 ? "Der Code stimmt nicht." : "Keine Verbindung. Versuch's gleich nochmal."); }
+}
+
+// ---------- demo friend ----------
+function demoFriend(){
+  const cur = mondayOf(today()); const t = today(); const wd = diffDays(cur,t);
+  const mk = arr => arr.map((v,i)=> i<=wd ? v : false);
+  return { id:"demo", demo:true, name:"Max", habits:[
+    {name:"Gym", target:4, count:mk([true,false,true,false,false,false,false]).filter(Boolean).length, days:mk([true,false,true,false,false,false,false]), weekStreak:3},
+    {name:"Kreatin", target:7, count:mk([true,true,true,false,false,false,false]).filter(Boolean).length, days:mk([true,true,true,false,false,false,false]), weekStreak:0, dayStreak:0}],
+    penalty:{habit:"Kreatin", reps:100, done:40, exercise:"Sit-ups"}, penaltiesDone:1, totals:{"Liegestütze":140, "Sit-ups":50}, nnn:{key:"wait", text:"Startet am 1.11."} };
+}
+function seedLocal(){
+  const s = freshState("Tim");
+  const cur = mondayOf(today());
+  s.habits.forEach(h=> h.start = addDays(cur,-21));
+  const t = today(); const pick = (offs) => offs.map(o=>addDays(cur,o)).filter(k=>k<=t);
+  s.logs.gym = [...pick([-21,-19,-17,-16,-14,-12,-10,-8]), ...pick([-7,-5,-3,-2]), ...pick([0,2])];
+  s.logs.kreatin = []; for(let i=-21;i<=0;i++){ const k=addDays(t,i); if(i!==-15) s.logs.kreatin.push(k); }
+  s.penalties = []; S = s; evaluate();
+  // mark the seeded past penalty as done so the preview opens unlocked
+  S.penalties.forEach(p=>{ if(!p.passed) p.done=p.reps; });
+  return S;
+}
+
+// ---------- render ----------
+const app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,2600); }
+
+function renderTabs(){
+  const nnnLive = S && nnnPhase().phase==="live";
+  const items = [["heute","Heute",I.today,S&&!!openPenalty()],["squad","Squad",I.squad,false],["nnn","NNN",I.moon,nnnLive && S.nnn.joined && !S.nnn.failedAt && !S.nnn.days.includes(today())],["ich","Ich",I.me,false]];
+  document.getElementById("tabs").innerHTML = items.map(([id,l,ic,dot])=>`<button class="tab" role="tab" aria-selected="${tab===id}" data-tab="${id}">${ic}${l}${dot?'<span class="dot"></span>':''}</button>`).join("");
+}
+
+function header(sub){
+  const t = today();
+  return `<div class="top"><div class="brand">Winter Arc<small>${esc(sub)}</small></div><div class="weekchip">KW ${isoWeek(t)} · ${WD[(parse(t).getDay()+6)%7]} ${fmt(t)}</div></div>
+  ${mode==="local"?`<div class="banner"><b>Vorschau:</b> Daten bleiben auf diesem Gerät, Max ist ein Beispiel. Geteilt wird erst in der veröffentlichten Version.</div>`:""}
+  ${simDate?`<div class="banner" style="border-color:var(--ember)"><b>Testmodus: ${fmt(simDate)}</b> Nichts wird gespeichert oder geteilt. <button class="btn ember small" id="simReset" style="margin-top:8px;display:block">Test beenden</button></div>`:""}`;
+}
+
+function penaltyCard(p){
+  const left = p.reps - p.done; const pct = Math.round(p.done/p.reps*100);
+  return `<div class="card penalty">
+    <div class="lockmsg">${I.lock}<span>Ziel verpasst: ${esc(p.habitName)} ${p.count}/${p.target} in KW ${isoWeek(p.week)}. Erst ${p.reps} ${esc(exOf(p))}, dann geht's weiter.</span></div>
+    <div class="row" style="align-items:flex-end;justify-content:space-between">
+      <div class="big">${left}<span> übrig</span></div>
+      <div class="label">${p.done} / ${p.reps} ${esc(exOf(p))}</div>
+    </div>
+    <div class="bar ember"><i style="width:${pct}%"></i></div>
+    <div class="row">
+      <button class="btn ember grow" data-pen="10">+10</button>
+      <button class="btn ember grow" data-pen="20">+20</button>
+      <button class="btn ember grow" data-pen="25">+25</button>
+      <button class="btn ghost grow" data-pen="-10">−10</button>
+    </div>
+  </div>`;
+}
+
+function habitCard(h, locked){
+  const cur = mondayOf(today()); const t = today(); const c = countIn(h,cur); const hit = c>=h.target;
+  const set = new Set(logsOf(h)); const ws = weekStreak(h); const daily = h.target===7;
+  const notYet = h.start > cur;
+  const days = weekDays(cur).map((k,i)=>`<button class="day ${set.has(k)?"on":""} ${k===t?"today":""}" data-log="${h.id}" data-day="${k}" ${k>t||locked?"disabled":""} aria-pressed="${set.has(k)}" aria-label="${WD[i]} ${fmt(k)}">${WD[i]}<b>${parse(k).getDate()}</b></button>`).join("");
+  return `<div class="card">
+    <div class="habit-head">
+      <div><div class="habit-name">${esc(h.name)}</div><div class="label">Ziel ${h.target}× / Woche · Strafe ${h.penalty} ${esc(exOf(h))}</div></div>
+      <div class="count ${hit?"hit":""}">${c}<span>/${h.target}</span></div>
+    </div>
+    <div class="bar ${hit?"hit":""}"><i style="width:${Math.min(100,c/h.target*100)}%"></i></div>
+    <div class="days">${days}</div>
+    <div class="meta">
+      <span class="pill fire">${I.flame}${ws} ${ws===1?"Woche":"Wochen"}</span>
+      ${daily?`<span class="pill fire">${I.flame}${dayStreak(h)} Tage am Stück</span>`:""}
+      ${hit?'<span class="pill good">Woche geschafft</span>':`<span class="pill">noch ${h.target-c}× bis So</span>`}
+      ${notYet?`<span class="pill">Strafen ab ${fmt(h.start)}</span>`:""}
+      ${h.share?"":'<span class="pill">privat</span>'}
+    </div>
+  </div>`;
+}
+
+function nnnBanner(){
+  const P = S.nnn.punish; if(!P || P.status!=="open") return "";
+  const sum = Object.values(P.log).reduce((a,b)=>a+b,0);
+  const end = addDays(P.start,P.days-1);
+  return `<div class="card penalty"><div class="label">NNN-Strafe Stufe ${P.stage}</div>
+  <div class="row" style="justify-content:space-between;align-items:flex-end;margin-top:6px"><div class="big" style="font-size:3rem">${P.total-sum}<span> übrig</span></div><div class="label">bis ${fmt(end)}</div></div>
+  <div class="bar ember"><i style="width:${sum/P.total*100}%"></i></div>
+  <button class="btn ghost small" data-tab="nnn">Zur NNN-Strafe</button></div>`;
+}
+
+function renderHeute(){
+  const p = openPenalty();
+  const cur = mondayOf(today());
+  const daysLeft = 6 - diffDays(cur, today());
+  app.innerHTML = header(`Woche läuft noch ${daysLeft===0?"bis heute Nacht":daysLeft+" Tage"}`) +
+    `<div class="stack ${p?"locked":""}">
+      ${p?penaltyCard(p):""}
+      ${nnnBanner()}
+      ${S.habits.map(h=>habitCard(h,!!p)).join("") || '<div class="card muted">Noch keine Gewohnheiten. Leg unter „Ich“ welche an.</div>'}
+    </div>
+    <h2>Strafen-Historie</h2>
+    <div class="card">${historyList()}</div>`;
+}
+function historyList(){
+  const rows = S.penalties.filter(p=>!p.passed).slice().reverse().slice(0,8);
+  if (!rows.length) return '<div class="muted">Noch keine Strafe kassiert. So bleibt\'s.</div>';
+  return rows.map(p=>`<div class="mini"><div><b>${esc(p.habitName)}</b> <span class="muted">KW ${isoWeek(p.week)} · ${p.count}/${p.target}</span></div><div class="c" style="color:${p.done>=p.reps?"var(--good)":"var(--ember)"}">${p.done}/${p.reps}</div></div>`).join("");
+}
+
+function personCard(pv, label){
+  const init = (pv.name||"?").trim().charAt(0).toUpperCase();
+  const stale = pv.week && pv.week !== mondayOf(today());
+  const habits = (pv.habits||[]).map(h=> stale ? {...h, count:0, days:[false,false,false,false,false,false,false]} : h).map(h=>`<div class="mini">
+      <div><b>${esc(h.name)}</b>${h.weekStreak!=null?` <span class="pill fire" style="margin-left:6px">${I.flame}${h.weekStreak}W${h.dayStreak!=null?` · ${h.dayStreak}T`:""}</span>`:""}</div>
+      <div class="c" style="color:${h.count>=h.target?"var(--good)":"var(--fg)"}">${h.count}/${h.target}</div>
+      <div class="dots">${(h.days||[]).map(on=>`<i class="${on?"on":""}"></i>`).join("")}</div></div>`).join("") || '<div class="muted">Teilt keine Gewohnheiten.</div>';
+  let status = "";
+  if (pv.penalty) status += `<span class="pill bad">${I.lock}Strafe: ${pv.penalty.done}/${pv.penalty.reps} ${esc(pv.penalty.exercise||"Liegestütze")} (${esc(pv.penalty.habit)})</span>`;
+  else if (pv.penalty===null) status += '<span class="pill good">Keine offene Strafe</span>';
+  if (pv.nnnPunish) status += `<span class="pill bad">NNN-Strafe: ${pv.nnnPunish.done}/${pv.nnnPunish.total}</span>`;
+  if (pv.nnn) status += `<span class="pill ${pv.nnn.key==="failed"?"bad":pv.nnn.key==="badge"?"good":""}">NNN: ${esc(pv.nnn.text)}</span>`;
+  const tot = pv.totals || (pv.pushupsTotal ? {"Liegestütze":pv.pushupsTotal} : {});
+  for (const [ex,n] of Object.entries(tot)) if (n) status += `<span class="pill">${n} ${esc(ex)} gesamt</span>`;
+  if (pv.penaltiesDone) status += `<span class="pill">${pv.penaltiesDone} Strafen abgearbeitet</span>`;
+  return `<div class="card"><div class="person"><div class="avatar">${esc(init)}</div><div><div class="nm">${esc(pv.name)}${label?`<span class="tag">${label}</span>`:""}</div>
+  <div class="muted">${pv.updated?"Aktualisiert "+new Date(pv.updated).toLocaleString("de-DE",{weekday:"short",hour:"2-digit",minute:"2-digit"}):""}</div></div></div>
+  ${habits}${status?`<div class="meta">${status}</div>`:""}</div>`;
+}
+function renderSquad(){
+  const list = others.length ? others.map(o=>personCard(o,"")).join("") :
+    `${mode!=="local"?'<div class="card"><b>Noch keiner da.</b><div class="muted" style="margin-top:4px">Teil den Link mit deinem Freund. Sobald er seinen Namen einträgt, taucht er hier auf. Unten siehst du ein Beispiel.</div></div>':""}${personCard(demoFriend(),"Beispiel")}`;
+  app.innerHTML = header("Wer zieht's durch?") + `<div class="stack">${list}</div>
+   <h2>So sieht er dich</h2><div class="stack">${personCard(publicView(),"Du")}</div>
+   <p class="muted">Was hier fehlt, ist privat. Ändern unter „Ich“.</p>`;
+}
+
+let cdTimer = null;
+function renderNNN(){
+  const ph = nnnPhase(); const n = S.nnn; const st = nnnStatus();
+  let body = "";
+  if (ph.phase==="wait"){
+    body = `<div class="card nnn-hero"><div class="label">No Nut November ${ph.year}</div>
+      <div class="quote" style="margin-bottom:0">Aktivierung in</div>
+      <div class="cd" id="cd"></div>
+      <div class="muted">Startet am 1. November um 0:00 Uhr.</div></div>`;
+  } else if (ph.phase==="live"){
+    const confirmedToday = n.days.includes(today());
+    const failed = !!n.failedAt;
+    body = `<div class="card nnn-hero"><div class="label">Tag ${ph.day} von 30</div>
+      <div class="quote">${esc(QUOTES[ph.day-1])}</div>
+      ${!n.joined?'<div class="muted">Du bist nicht dabei. Aktivieren unten.</div>':
+        failed?`<div class="pill bad">Verkackt am ${fmt(n.failedAt)}</div>`:
+        confirmedToday?'<div class="pill good">Heute bestätigt. Stark.</div>':
+        `<div class="row"><button class="btn grow" id="nnnOk">Tag ${ph.day} geschafft</button><button class="btn ghost" id="nnnFail">Verkackt</button></div>`}
+      ${ui.nnnConfirm?`<div class="confirm"><b>Sicher?</b> Das kostet 500 Liegestütze in 3 Tagen. Schaffst du die nicht, werden es 1000 in 10 Tagen.<div class="row" style="margin-top:10px"><button class="btn ember grow" id="nnnFailYes">Ja, verkackt</button><button class="btn ghost grow" id="nnnFailNo">Abbrechen</button></div></div>`:""}
+      ${monthGrid(ph)}</div>`;
+  } else {
+    body = `<div class="card nnn-hero"><div class="label">No Nut November ${ph.year}</div><div class="quote">${st.key==="badge"?"Durchgezogen.":"Vorbei."}</div><div class="muted">${esc(st.text)}</div>${monthGrid(ph)}</div>`;
+  }
+  const P = n.punish;
+  let pun = "";
+  if (P){
+    const sum = Object.values(P.log).reduce((a,b)=>a+b,0); const end = addDays(P.start,P.days-1);
+    const daysLeft = Math.max(1, diffDays(today(), end)+1); const perDay = Math.ceil(Math.max(0,P.total-sum)/daysLeft);
+    pun = `<h2>NNN-Strafe</h2><div class="card penalty">
+      <div class="label">Stufe ${P.stage} · ${P.total} in ${P.days} Tagen · ${fmt(P.start)} bis ${fmt(end)}</div>
+      ${P.status==="open"?`<div class="row" style="justify-content:space-between;align-items:flex-end;margin-top:8px"><div class="big">${P.total-sum}<span> übrig</span></div><div class="label">heute ca. ${perDay}</div></div>
+      <div class="bar ember"><i style="width:${sum/P.total*100}%"></i></div>
+      <div class="row"><button class="btn ember grow" data-np="10">+10</button><button class="btn ember grow" data-np="25">+25</button><button class="btn ember grow" data-np="50">+50</button><button class="btn ghost grow" data-np="-10">−10</button></div>
+      ${P.stage===1?'<p class="muted" style="margin-bottom:0">Nicht geschafft bis zum Ende? Dann 1000 in 10 Tagen.</p>':""}`
+      : P.status==="done"?'<div class="pill good" style="margin-top:8px">Abgearbeitet</div>':'<div class="pill bad" style="margin-top:8px">Auch Stufe 2 nicht geschafft</div>'}
+    </div>`;
+  }
+  app.innerHTML = header("No Nut November") + `<div class="stack">${body}</div>${pun}
+    <h2>Badge</h2><div class="card badge">${st.key==="badge"?I.badge:I.badgeOff}<div><b>NNN ${ph.year}</b><div class="muted">${st.key==="badge"?"Freigeschaltet. Sieht dein Freund, wenn du NNN teilst.":"30 Tage bestätigen, nicht verkacken."}</div></div></div>
+    <h2>Regeln</h2><ol class="rules">
+      <li>Vom <b>1. bis 30. November</b> jeden Tag bestätigen.</li>
+      <li>Jeden Tag gibt's einen neuen Spruch.</li>
+      <li>Verkackt: <b>500 Liegestütze in 3 Tagen</b>.</li>
+      <li>Nicht geschafft: <b>1000 in 10 Tagen</b>.</li>
+      <li>30 von 30 bestätigt: <b>Badge</b>.</li></ol>
+    <div class="card" style="margin-top:16px"><div class="toggle"><span>Ich mache mit</span><label class="switch"><input type="checkbox" id="nnnJoin" ${n.joined?"checked":""}><i></i></label></div></div>`;
+  clearInterval(cdTimer);
+  if (ph.phase==="wait"){
+    const target = new Date(ph.year,10,1,0,0,0);
+    const tick = () => { const el=document.getElementById("cd"); if(!el) return clearInterval(cdTimer);
+      let s = Math.max(0, Math.floor((target - nowDate())/1000));
+      const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); s%=60;
+      el.innerHTML = [[d,"Tage"],[h,"Std"],[m,"Min"],[s,"Sek"]].map(([v,l])=>`<div><b>${pad(v)}</b><span>${l}</span></div>`).join(""); };
+    tick(); cdTimer = setInterval(tick,1000);
+  }
+}
+function monthGrid(ph){
+  const n = S.nnn; const t = today(); let html = '<div class="month">';
+  const lead = (parse(ph.start).getDay()+6)%7; for(let i=0;i<lead;i++) html+='<span></span>';
+  for (let d=1; d<=30; d++){
+    const k = `${ph.year}-11-${pad(d)}`; const ok = n.days.includes(k); const fail = n.failedAt===k;
+    const canTap = n.joined && !n.failedAt && k<=t && !ok && ph.phase==="live";
+    html += `<button class="${ok?"ok":""} ${fail?"fail":""} ${k===t?"today":""}" ${canTap?`data-nday="${k}"`:"disabled"} aria-label="${d}. November${ok?" bestätigt":""}">${d}</button>`;
+  }
+  return html + '</div><p class="muted" style="margin-bottom:0">Vergessen zu bestätigen? Tipp auf den Tag.</p>';
+}
+
+function penaltyEditor(h){
+  const ex = exOf(h); const exCustom = ui.exCustom[h.id] || !EX_PRESETS.includes(ex);
+  const numCustom = ui.numCustom[h.id] || !NUM_PRESETS.includes(h.penalty);
+  return `<div class="g2">
+    <div class="field"><label class="label" for="hx-${h.id}">Strafe</label>
+      <select id="hx-${h.id}" data-hf="exsel" data-h="${h.id}">${EX_PRESETS.map(x=>`<option value="${x}" ${!exCustom&&x===ex?"selected":""}>${x}</option>`).join("")}<option value="__own" ${exCustom?"selected":""}>Eigene …</option></select></div>
+    <div class="field"><label class="label" for="hp-${h.id}">Anzahl</label>
+      <select id="hp-${h.id}" data-hf="numsel" data-h="${h.id}">${NUM_PRESETS.map(n=>`<option value="${n}" ${!numCustom&&n===h.penalty?"selected":""}>${n}</option>`).join("")}<option value="__own" ${numCustom?"selected":""}>Eigene …</option></select></div>
+  </div>
+  ${exCustom||numCustom?`<div class="g2">
+    ${exCustom?`<div class="field"><label class="label" for="hxo-${h.id}">Eigene Strafe</label><input id="hxo-${h.id}" data-hf="exercise" data-h="${h.id}" value="${EX_PRESETS.includes(ex)?"":esc(ex)}" placeholder="z. B. Burpees" maxlength="20"></div>`:"<div></div>"}
+    ${numCustom?`<div class="field"><label class="label" for="hpo-${h.id}">Eigene Anzahl</label><input id="hpo-${h.id}" type="number" inputmode="numeric" min="1" max="5000" data-hf="penalty" data-h="${h.id}" value="${h.penalty}"></div>`:""}
+  </div>`:""}`;
+}
+
+const MONTHS=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+function simMonths(){ const d=new Date(); const out=[]; for(let i=-1;i<=4;i++){ const x=new Date(d.getFullYear(), d.getMonth()+i, 1); out.push([`${x.getFullYear()}-${pad(x.getMonth()+1)}`, `${MONTHS[x.getMonth()]} ${x.getFullYear()}`]); } return out; }
+function simPresets(){ const y=nnnPhase().year; const nm=addDays(mondayOf(keyOf(new Date())),7);
+  return [[nm,"Nächster Mo"],[`${y}-11-01`,"1.11."],[`${y}-11-04`,"4.11."],[`${y}-11-07`,"7.11."],[`${y}-11-30`,"30.11."],[`${y}-12-01`,"1.12."]]; }
+function goSim(k){ if(!simDate) realS = JSON.parse(JSON.stringify(S)); simDate = k; evaluate(); toast("Testmodus: "+fmt(k)); render(); }
+
+function renderIch(){
+  app.innerHTML = header("Einstellungen") + `
+  <h2>Profil</h2>${(()=>{ const st=pushupStats(); return `<div class="card penalty" style="margin-bottom:12px">
+    <div class="label">Strafen insgesamt abgearbeitet</div>
+    <div class="tots">${(Object.keys(st.totals).length?Object.entries(st.totals):[["Liegestütze",0]]).map(([ex,n])=>`<div><b>${n}</b><span>${esc(ex)}</span></div>`).join("")}</div>
+    <div class="meta"><span class="pill">${st.done} Strafen erledigt</span>${st.nnn?`<span class="pill">${st.nnn} Liegestütze aus NNN</span>`:""}</div></div>`; })()}
+  <div class="card"><div class="field"><label class="label" for="nm">Dein Name</label><input id="nm" value="${esc(S.name)}" maxlength="24"></div></div>
+  <h2>Gewohnheiten</h2><div class="card">${S.habits.map(h=>`
+    <div class="hedit">
+      <div class="g3">
+        <div class="field"><label class="label" for="hn-${h.id}">Name</label><input id="hn-${h.id}" data-hf="name" data-h="${h.id}" value="${esc(h.name)}" maxlength="20"></div>
+        <div class="field"><label class="label" for="ht-${h.id}">×/Woche</label><select id="ht-${h.id}" data-hf="target" data-h="${h.id}">${[1,2,3,4,5,6,7].map(n=>`<option ${n===h.target?"selected":""}>${n}</option>`).join("")}</select></div>
+      </div>
+      ${penaltyEditor(h)}
+      <div class="toggle" style="border:0;padding:0"><span>Für Freund sichtbar</span><label class="switch"><input type="checkbox" id="hs-${h.id}" data-hf="share" data-h="${h.id}" ${h.share?"checked":""}><i></i></label></div>
+      ${ui.delConfirm===h.id?`<div class="row"><button class="btn ember small" data-delyes="${h.id}">Wirklich löschen</button><button class="btn ghost small" data-delno>Abbrechen</button></div>`:`<div><button class="btn ghost small" data-del="${h.id}">Löschen</button></div>`}
+    </div>`).join("")}
+    <div class="hedit"><div class="label">Neue Gewohnheit</div>
+      <div class="row"><input class="grow" id="newH" placeholder="z. B. Kalt duschen" maxlength="20" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+      <select id="newT" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px">${[1,2,3,4,5,6,7].map(n=>`<option ${n===7?"selected":""} value="${n}">${n}×</option>`).join("")}</select>
+      <button class="btn" id="addH">Hinzufügen</button></div>
+      <div class="muted">Strafen zählen ab der ersten vollen Woche.</div></div>
+  </div>
+  <h2>Was dein Freund sieht</h2><div class="card">
+    ${[["streak","Streaks"],["penalties","Strafen und Fortschritt"],["nnn","NNN-Status und Badge"]].map(([k,l])=>`<div class="toggle"><span>${l}</span><label class="switch"><input type="checkbox" id="sh-${k}" data-share="${k}" ${S.share[k]?"checked":""}><i></i></label></div>`).join("")}
+    <div class="muted" style="margin-top:6px">Einzelne Gewohnheiten blendest du oben aus.</div></div>
+  <h2>Testen</h2><div class="card"><div class="field"><span class="label">Datum simulieren</span>
+    <div class="row" style="margin-top:4px">${simPresets().map(([k,l])=>`<button class="btn ghost small" data-simgo="${k}">${l}</button>`).join("")}</div>
+    <div class="row" style="margin-top:6px;align-items:flex-end">
+      <div class="field" style="flex:1 1 70px"><label class="label" for="simD">Tag</label><select id="simD">${Array.from({length:31},(_,i)=>`<option ${i+1===parse(today()).getDate()?"selected":""}>${i+1}</option>`).join("")}</select></div>
+      <div class="field" style="flex:2 1 120px"><label class="label" for="simM">Monat</label><select id="simM">${simMonths().map(([v,l])=>`<option value="${v}" ${v===today().slice(0,7)?"selected":""}>${l}</option>`).join("")}</select></div>
+      <button class="btn" id="simGo">Springen</button>
+    </div></div>
+    <div class="muted" style="margin-top:8px">Spring z. B. auf den 3.11., um NNN zu sehen, oder auf nächsten Montag, um eine Strafe auszulösen. Im Testmodus wird nichts gespeichert oder an deinen Freund geschickt. Beim Beenden ist alles wie vorher.</div></div>
+  ${mode==="api" ? `<h2>Zugang</h2><div class="card stack">
+    <div class="muted">Mit deinem Zugangscode meldest du dich auf einem weiteren Gerät an oder verbindest einen Pi bzw. eine andere App. Gib ihn niemandem sonst.</div>
+    ${ui.showToken ? `<code class="tok" id="tokText">${esc(token)}</code><div class="row"><button class="btn small" id="copyTok">Kopieren</button><button class="btn ghost small" id="hideTok">Verbergen</button></div>` : `<div><button class="btn ghost small" id="showTok">Code anzeigen</button></div>`}
+    ${ui.logoutConfirm ? `<div class="confirm"><b>Abmelden?</b> Ohne deinen Code kommst du danach nicht mehr rein. Hast du ihn gespeichert?<div class="row" style="margin-top:10px"><button class="btn ember grow" id="logoutYes">Abmelden</button><button class="btn ghost grow" id="logoutNo">Abbrechen</button></div></div>` : `<div><button class="btn ghost small" id="logout">Auf diesem Gerät abmelden</button></div>`}
+  </div>` : ""}
+  <p class="muted">${mode==="api"?"Online: Dein Freund sieht nur, was du oben freigibst. Alles andere ist verschlüsselt gespeichert.":mode==="db"?"Online: Daten werden mit deinem Freund geteilt.":"Vorschau: Daten bleiben auf diesem Gerät."}</p>`;
+}
+
+function render(){
+  renderTabs();
+  if (tab!=="nnn") clearInterval(cdTimer);
+  ({heute:renderHeute, squad:renderSquad, nnn:renderNNN, ich:renderIch}[tab] || renderHeute)();
+}
+
+function renderOnboarding(){
+  document.getElementById("tabs").innerHTML = "";
+  app.innerHTML = `<div class="onb"><div class="brand" style="font-size:3.4rem">Winter<br>Arc<small>Gym, Kreatin, No Nut November. Wer schwächelt, macht Liegestütze.</small></div>
+  <div class="card stack"><div class="field"><label class="label" for="onbName">Wie heißt du?</label><input id="onbName" maxlength="24" placeholder="Tim" autocomplete="nickname"></div>
+  <div class="muted">Start mit Gym 4× und Kreatin 7× pro Woche, je 100 Liegestütze Strafe. Kannst du später ändern.</div>
+  <button class="btn" id="onbGo">Arc starten</button></div></div>`;
+  document.getElementById("onbGo").onclick = () => {
+    const name = document.getElementById("onbName").value.trim() || "Ich";
+    S = freshState(name); evaluate(); save(); render();
+  };
+}
+
+// ---------- events ----------
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-tab]"); if(!b) return; tab = b.dataset.tab; try{localStorage.setItem("wa-tab",tab)}catch(e){} ui.nnnConfirm=false; render(); window.scrollTo(0,0);
+});
+app.addEventListener("click", e => {
+  const t = e.target.closest("button"); if(!t) return;
+  if (t.dataset.claim) return doClaim(t.dataset.claim);
+  if (t.id==="onbLogin") return doLogin();
+  if (!S) return;
+  if (t.id==="showTok"){ ui.showToken=true; return render(); }
+  if (t.id==="hideTok"){ ui.showToken=false; return render(); }
+  if (t.id==="copyTok"){
+    const done = () => toast("Code kopiert.");
+    const fallback = () => { const el=document.getElementById("tokText"); const rg=document.createRange(); rg.selectNodeContents(el); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(rg); toast("Code markiert. Jetzt kopieren."); };
+    try { navigator.clipboard.writeText(token).then(done, fallback); } catch(_){ fallback(); }
+    return;
+  }
+  if (t.id==="logout"){ ui.logoutConfirm=true; return render(); }
+  if (t.id==="logoutNo"){ ui.logoutConfirm=false; return render(); }
+  if (t.id==="logoutYes"){ ui.logoutConfirm=false; ui.showToken=false; setToken(null); try{localStorage.removeItem("wa-cache")}catch(_){} S=null; me=null; others=[]; clearInterval(pollT); bootApi(); return; }
+  if (t.dataset.tab){ tab=t.dataset.tab; render(); window.scrollTo(0,0); return; }
+  if (t.dataset.log){
+    if (openPenalty()) return toast("Erst die Strafe abarbeiten.");
+    const h = S.habits.find(x=>x.id===t.dataset.log); const arr = logsOf(h); const k=t.dataset.day;
+    const i = arr.indexOf(k); if(i>=0) arr.splice(i,1); else arr.push(k);
+    const c = countIn(h, mondayOf(today()));
+    if (i<0 && c===h.target) toast(`${h.name}: Wochenziel geschafft.`);
+    return commit();
+  }
+  if (t.dataset.pen){
+    const p = openPenalty(); if(!p) return;
+    p.done = Math.max(0, Math.min(p.reps, p.done + Number(t.dataset.pen)));
+    if (p.done>=p.reps){ p.doneAt = today(); toast("Strafe abgearbeitet. Weiter geht's."); }
+    return commit();
+  }
+  if (t.dataset.np){
+    const P = S.nnn.punish; if(!P||P.status!=="open") return;
+    const k=today(); P.log[k] = Math.max(0,(P.log[k]||0)+Number(t.dataset.np));
+    const sum = Object.values(P.log).reduce((a,b)=>a+b,0);
+    if (sum>=P.total){ P.status="done"; toast("NNN-Strafe abgearbeitet."); }
+    return commit();
+  }
+  if (t.id==="nnnOk"){ if(!S.nnn.days.includes(today())) S.nnn.days.push(today()); toast("Tag bestätigt."); return commit(); }
+  if (t.dataset.nday){ if(!S.nnn.days.includes(t.dataset.nday)) S.nnn.days.push(t.dataset.nday); return commit(); }
+  if (t.id==="nnnFail"){ ui.nnnConfirm=true; return render(); }
+  if (t.id==="nnnFailNo"){ ui.nnnConfirm=false; return render(); }
+  if (t.id==="nnnFailYes"){ ui.nnnConfirm=false; S.nnn.failedAt=today(); S.nnn.punish={stage:1,start:today(),total:500,days:3,log:{},status:"open"}; return commit(); }
+  if (t.dataset.del){ ui.delConfirm=t.dataset.del; return render(); }
+  if (t.hasAttribute("data-delno")){ ui.delConfirm=null; return render(); }
+  if (t.dataset.delyes){ const id=t.dataset.delyes; S.habits=S.habits.filter(h=>h.id!==id); S.penalties=S.penalties.filter(p=>p.habitId!==id||p.done>=p.reps); ui.delConfirm=null; return commit(); }
+  if (t.id==="addH"){
+    const name = document.getElementById("newH").value.trim(); if(!name) return toast("Gib der Gewohnheit einen Namen.");
+    const id = uid8(); S.habits.push({id,name,target:Number(document.getElementById("newT").value),penalty:100,share:true,start:firstWeek(today())}); S.logs[id]=[];
+    toast(`${name} hinzugefügt.`); return commit();
+  }
+  if (t.dataset.simgo){ return goSim(t.dataset.simgo); }
+  if (t.id==="simGo"){ const m=document.getElementById("simM").value; let d=Number(document.getElementById("simD").value);
+    const [yy,mm]=m.split("-").map(Number); const last=new Date(yy,mm,0).getDate(); if(d>last) d=last; return goSim(`${m}-${pad(d)}`); }
+  if (t.id==="simReset"){ simDate=null; if(realS){ S=realS; realS=null; } ui.nnnConfirm=false; toast("Test beendet. Echte Daten zurück."); render(); return; }
+});
+app.addEventListener("change", e => {
+  const el = e.target; if(!S) return;
+  if (el.id==="nm"){ S.name = el.value.trim()||S.name; return commit(); }
+  if (el.dataset.hf){
+    const h = S.habits.find(x=>x.id===el.dataset.h); const f = el.dataset.hf;
+    if (f==="exsel"){ if(el.value==="__own"){ ui.exCustom[h.id]=true; return render(); } ui.exCustom[h.id]=false; h.exercise=el.value; return commit(); }
+    if (f==="numsel"){ if(el.value==="__own"){ ui.numCustom[h.id]=true; return render(); } ui.numCustom[h.id]=false; h.penalty=Number(el.value); return commit(); }
+    if (f==="exercise"){ const v=el.value.trim(); if(v) h.exercise=v; return commit(); }
+    if (f==="penalty"){ const n=Math.round(Number(el.value)); if(n>=1 && n<=5000) h.penalty=n; else toast("Gib eine Zahl zwischen 1 und 5000 ein."); return commit(); }
+    h[f] = f==="share" ? el.checked : f==="name" ? (el.value.trim()||h.name) : Number(el.value);
+    return commit();
+  }
+  if (el.dataset.share){ S.share[el.dataset.share]=el.checked; return commit(); }
+  if (el.id==="nnnJoin"){ S.nnn.joined = el.checked; return commit(); }
+});
+
+// ---------- boot ----------
+function bootLocal(){
+  mode = "local";
+  let s = null; try{ s = JSON.parse(localStorage.getItem("wa-state")); }catch(e){}
+  S = s || seedLocal(); evaluate(); others = []; render();
+}
+// Inside the Claude viewer a fixed bottom bar can end up out of sight, so the menu sits at the top there.
+let framed = true; try { framed = window.self !== window.top; } catch(e){}
+if (framed){ document.body.classList.add("topnav"); const tb=document.querySelector(".tabs"); document.body.insertBefore(tb, app); }
+async function tryClaudeDb(){
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [d, u] = await Promise.all([claude.use("db"), claude.use("user")]);
+    if (!d || !u) return;
+    const id = await u.id(); if (!id) return;
+    db = d; me = id;
+    const snap = await db.collection("data/users/"+me).doc("state").get();
+    mode = "db";
+    db.collection("players").onSnapshot(qs => {
+      others = qs.docs.filter(x=>x.id!==me && x.exists).map(x=>({id:x.id, ...x.data()}));
+      if (S && tab==="squad") render();
+    }, () => {});
+    if (snap.exists){ S = JSON.parse(JSON.stringify(snap.data())); if(evaluate()) save(); render(); }
+    else { S = null; renderOnboarding(); }
+  } catch(e){ /* stay in preview mode */ }
+}
+
+(async () => {
+  if (!framed && /^https?:$/.test(location.protocol)){
+    app.innerHTML = '<div class="onb"><div class="brand" style="font-size:3.4rem">Winter<br>Arc<small>Lädt …</small></div></div>';
+    if (await bootApi()) return;
+  }
+  bootLocal();
+  tryClaudeDb();
+})();
+})();
+</script>
+
+</body>
+</html>
