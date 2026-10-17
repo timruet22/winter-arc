@@ -17,7 +17,7 @@ Der Server und der Cloudflare-Admin sehen den privaten Teil nur als verschlüsse
 
 ## Plätze und Zugangscodes
 
-Es gibt zwei Plätze: `tim` und `freund`. Jeder Platz kann **einmal** übernommen werden. Danach bekommt man einen Zugangscode (`wa_…`). Die Datenbank speichert nur dessen SHA-256-Hash.
+Am Anfang gibt es zwei Plätze: `tim` (Admin) und `freund`. Der Admin kann in der App unter **Ich → Squad verwalten** Plätze anlegen, Personen entfernen und Codes zurücksetzen. Alle anderen können unter **Ich → Austreten** gehen. Jeder Platz kann **einmal** übernommen werden. Danach bekommt man einen Zugangscode (`wa_…`). Die Datenbank speichert nur dessen SHA-256-Hash.
 
 - Den Code findest du in der App unter **Ich → Zugang → Code anzeigen**.
 - Mit dem Code meldest du dich auf weiteren Geräten an und verbindest einen Pi oder eine andere App.
@@ -41,6 +41,10 @@ Authorization: Bearer wa_DEIN_CODE
 | GET | `/api/players` | Alle Spieler mit ihrem öffentlichen Teil |
 | PUT | `/api/public` | Eigenen öffentlichen Teil setzen (Format unten) |
 | GET/PUT | `/api/state` | Eigener privater Teil, verschlüsselt: `{"enc":"…"}` |
+| POST | `/api/leave` | Austreten: löscht eigene Daten und Platz (nicht für den Admin) |
+| POST | `/api/admin/players` | Admin: neuen freien Platz anlegen `{"name":"Jonas"}` |
+| DELETE | `/api/admin/players/<id>` | Admin: Person und ihre Daten entfernen |
+| POST | `/api/admin/players/<id>/reset` | Admin: Code zurücksetzen, Platz wird wieder frei (Daten weg) |
 
 ### Format des öffentlichen Teils
 

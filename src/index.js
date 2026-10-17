@@ -5,7 +5,7 @@ const MAX_BODY = 256 * 1024;
 
 const CORS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, PUT, POST, OPTIONS",
+  "access-control-allow-methods": "GET, PUT, POST, DELETE, OPTIONS",
   "access-control-allow-headers": "authorization, content-type",
   "access-control-max-age": "86400",
 };
@@ -44,7 +44,8 @@ async function authed(req, env) {
   const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(\S+)$/i);
   if (!m) return null;
   const hash = await sha256(m[1]);
-  return env.DB.prepare("SELECT id, name FROM players WHERE token_hash = ?").bind(hash).first();
+  const row = await env.DB.prepare("SELECT id, name, is_admin FROM players WHERE token_hash = ?").bind(hash).first();
+  return row ? { id: row.id, name: row.name, admin: !!row.is_admin } : null;
 }
 
 const cleanName = (n) => String(n || "").trim().slice(0, 24);
@@ -120,6 +121,39 @@ async function handleApi(req, env, path) {
         public: r.public_json ? JSON.parse(r.public_json) : null,
       })),
     });
+  }
+
+  // Leave the Winter Arc: deletes your own data and your place
+  if (path === "/api/leave" && method === "POST") {
+    if (me.admin) return err(400, "Der Admin kann nicht austreten");
+    await env.DB.prepare("DELETE FROM players WHERE id = ?").bind(me.id).run();
+    return json({ ok: true });
+  }
+
+  // Admin: add a new free place
+  if (path === "/api/admin/players" && method === "POST") {
+    if (!me.admin) return err(403, "Nur der Admin darf das");
+    const body = await readBody(req);
+    const name = cleanName(body.name);
+    if (!name) return err(400, "name fehlt");
+    const { n } = await env.DB.prepare("SELECT COUNT(*) AS n FROM players").first();
+    if (n >= 20) return err(400, "Maximal 20 Plätze");
+    const base = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "spieler";
+    const id = base + "-" + Math.random().toString(36).slice(2, 6);
+    await env.DB.prepare("INSERT INTO players (id, name) VALUES (?, ?)").bind(id, name).run();
+    return json({ id, name });
+  }
+
+  // Admin: remove someone (their data is deleted) or free their place (new code needed)
+  const m = path.match(/^\/api\/admin\/players\/([a-z0-9-]+)(\/reset)?$/);
+  if (m && (method === "DELETE" || (method === "POST" && m[2]))) {
+    if (!me.admin) return err(403, "Nur der Admin darf das");
+    if (m[1] === me.id) return err(400, "Dich selbst kannst du hier nicht entfernen");
+    const res = m[2]
+      ? await env.DB.prepare("UPDATE players SET token_hash = NULL, claimed_at = NULL, state_enc = NULL, state_updated = NULL, public_json = NULL, public_updated = NULL WHERE id = ?").bind(m[1]).run()
+      : await env.DB.prepare("DELETE FROM players WHERE id = ?").bind(m[1]).run();
+    if (!res.meta.changes) return err(404, "Gibt es nicht");
+    return json({ ok: true });
   }
 
   return err(404, "Unbekannter Pfad");

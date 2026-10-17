@@ -145,6 +145,8 @@ body.topnav .toast{position:sticky;display:block;width:max-content;margin:0 auto
 .tab .dot{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--ember)}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:20;max-width:calc(100% - 32px)}
 .onb{display:grid;gap:14px;padding-top:30px}
+.prow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0;padding-top:0}
 .tok{display:block;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;background:var(--surface2);border:1px solid var(--line);padding:10px 12px;border-radius:10px;user-select:all;-webkit-user-select:all}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -218,7 +220,7 @@ let db = null;
 let others = [];        // public docs of other players
 let tab = "heute";
 try { tab = localStorage.getItem("wa-tab") || "heute"; } catch(e){}
-let ui = { nnnConfirm:false, delConfirm:null, exCustom:{}, numCustom:{}, showToken:false, logoutConfirm:false };
+let ui = { nnnConfirm:false, delConfirm:null, exCustom:{}, numCustom:{}, showToken:false, logoutConfirm:false, pConfirm:null, leaveConfirm:false };
 
 // ---------- logic ----------
 const logsOf = h => S.logs[h.id] || (S.logs[h.id]=[]);
@@ -369,13 +371,14 @@ async function decrypt(b64){
 }
 function setToken(t){ token = t; try { t ? localStorage.setItem("wa-token", t) : localStorage.removeItem("wa-token"); } catch(e){} }
 
-let pollT = null;
+let pollT = null, isAdmin = false, allPlayers = [];
 async function poll(){
   if (mode!=="api" || !token) return;
   try {
     const d = await api("GET","/api/players");
+    allPlayers = d.players;
     others = d.players.filter(p => p.id!==me && p.public).map(p => ({ id:p.id, ...p.public, updated:p.updated }));
-    if (S && tab==="squad") render();
+    if (S && (tab==="squad" || (tab==="ich" && isAdmin))) render();
   } catch(e){}
 }
 function startPolling(){
@@ -385,7 +388,7 @@ function startPolling(){
 document.addEventListener("visibilitychange", () => { if (document.visibilityState==="visible") poll(); });
 
 async function loadMine(){
-  const info = await api("GET","/api/me"); me = info.id;
+  const info = await api("GET","/api/me"); me = info.id; isAdmin = !!info.admin;
   const st = await api("GET","/api/state");
   if (st.enc) S = JSON.parse(await decrypt(st.enc));
   else if (st.seed) S = st.seed;
@@ -661,6 +664,24 @@ function simPresets(){ const y=nnnPhase().year; const nm=addDays(mondayOf(keyOf(
   return [[nm,"Nächster Mo"],[`${y}-11-01`,"1.11."],[`${y}-11-04`,"4.11."],[`${y}-11-07`,"7.11."],[`${y}-11-30`,"30.11."],[`${y}-12-01`,"1.12."]]; }
 function goSim(k){ if(!simDate) realS = JSON.parse(JSON.stringify(S)); simDate = k; evaluate(); toast("Testmodus: "+fmt(k)); render(); }
 
+function squadAdmin(){
+  const rows = allPlayers.map(p => {
+    const status = p.id===me ? "Du · Admin" : p.claimed ? "dabei" : "frei, wartet auf Anmeldung";
+    let actions = "";
+    if (p.id!==me){
+      const c = ui.pConfirm && ui.pConfirm.id===p.id ? ui.pConfirm.kind : null;
+      actions = c ? `<span class="row"><button class="btn ember small" data-pyes="${esc(p.id)}">${c==="rm"?"Ja, entfernen":"Ja, zurücksetzen"}</button><button class="btn ghost small" data-pno>Nein</button></span>`
+        : `<span class="row">${p.claimed?`<button class="btn ghost small" data-preset="${esc(p.id)}">Code zurücksetzen</button>`:""}<button class="btn ghost small" data-prm="${esc(p.id)}">Entfernen</button></span>`;
+    }
+    const warn = ui.pConfirm && ui.pConfirm.id===p.id ? `<div class="muted" style="flex-basis:100%">${ui.pConfirm.kind==="rm" ? "Der Platz und alle Daten dieser Person werden gelöscht." : "Die Person verliert ihren Code und ihre Daten und muss den Platz neu übernehmen."}</div>` : "";
+    return `<div class="prow"><span><b>${esc(p.name)}</b> <span class="muted">${status}</span></span>${actions}${warn}</div>`;
+  }).join("");
+  return `<h2>Squad verwalten</h2><div class="card">${rows || '<div class="muted">Lädt …</div>'}
+    <div class="hedit"><div class="label">Person hinzufügen</div>
+      <div class="row"><input class="grow" id="newP" placeholder="Name" maxlength="24" autocomplete="off" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px"><button class="btn" id="addP">Platz anlegen</button></div>
+      <div class="muted">Danach schickst du der Person den Link. Beim ersten Öffnen wählt sie ihren Platz und bekommt ihren Code.</div></div></div>`;
+}
+
 function renderIch(){
   app.innerHTML = header("Einstellungen") + `
   <h2>Profil</h2>${(()=>{ const st=pushupStats(); return `<div class="card penalty" style="margin-bottom:12px">
@@ -700,6 +721,11 @@ function renderIch(){
     ${ui.showToken ? `<code class="tok" id="tokText">${esc(token)}</code><div class="row"><button class="btn small" id="copyTok">Kopieren</button><button class="btn ghost small" id="hideTok">Verbergen</button></div>` : `<div><button class="btn ghost small" id="showTok">Code anzeigen</button></div>`}
     ${ui.logoutConfirm ? `<div class="confirm"><b>Abmelden?</b> Ohne deinen Code kommst du danach nicht mehr rein. Hast du ihn gespeichert?<div class="row" style="margin-top:10px"><button class="btn ember grow" id="logoutYes">Abmelden</button><button class="btn ghost grow" id="logoutNo">Abbrechen</button></div></div>` : `<div><button class="btn ghost small" id="logout">Auf diesem Gerät abmelden</button></div>`}
   </div>` : ""}
+  ${mode==="api" && isAdmin ? squadAdmin() : ""}
+  ${mode==="api" && !isAdmin ? `<h2>Austreten</h2><div class="card stack">
+    ${ui.leaveConfirm ? `<div class="confirm" style="margin-top:0"><b>Wirklich austreten?</b> Deine Daten werden gelöscht und dein Platz verschwindet. Das lässt sich nicht rückgängig machen.<div class="row" style="margin-top:10px"><button class="btn ember grow" id="leaveYes">Austreten</button><button class="btn ghost grow" id="leaveNo">Abbrechen</button></div></div>`
+      : `<div class="muted">Du willst nicht mehr mitmachen? Dann werden deine Daten gelöscht und du verschwindest aus dem Squad.</div><div><button class="btn ghost small" id="leave">Aus dem Winter Arc austreten</button></div>`}
+  </div>` : ""}
   <p class="muted">${mode==="api"?"Online: Dein Freund sieht nur, was du oben freigibst. Alles andere ist verschlüsselt gespeichert.":mode==="db"?"Online: Daten werden mit deinem Freund geteilt.":"Vorschau: Daten bleiben auf diesem Gerät."}</p>`;
 }
 
@@ -724,6 +750,7 @@ function renderOnboarding(){
 // ---------- events ----------
 document.getElementById("tabs").addEventListener("click", e => {
   const b = e.target.closest("[data-tab]"); if(!b) return; tab = b.dataset.tab; try{localStorage.setItem("wa-tab",tab)}catch(e){} ui.nnnConfirm=false; render(); window.scrollTo(0,0);
+  if (mode==="api" && (tab==="squad" || tab==="ich")) poll();
 });
 app.addEventListener("click", e => {
   const t = e.target.closest("button"); if(!t) return;
@@ -740,6 +767,26 @@ app.addEventListener("click", e => {
   }
   if (t.id==="logout"){ ui.logoutConfirm=true; return render(); }
   if (t.id==="logoutNo"){ ui.logoutConfirm=false; return render(); }
+  if (t.dataset.prm){ ui.pConfirm={id:t.dataset.prm, kind:"rm"}; return render(); }
+  if (t.dataset.preset){ ui.pConfirm={id:t.dataset.preset, kind:"reset"}; return render(); }
+  if (t.hasAttribute("data-pno")){ ui.pConfirm=null; return render(); }
+  if (t.dataset.pyes){
+    const {id, kind} = ui.pConfirm || {}; ui.pConfirm=null;
+    (async()=>{ try { kind==="rm" ? await api("DELETE","/api/admin/players/"+id) : await api("POST","/api/admin/players/"+id+"/reset"); toast(kind==="rm"?"Entfernt.":"Zurückgesetzt. Platz ist wieder frei."); await poll(); render(); } catch(e){ toast(e.message || "Hat nicht geklappt."); } })();
+    return;
+  }
+  if (t.id==="addP"){
+    const name = document.getElementById("newP").value.trim(); if(!name) return toast("Gib einen Namen ein.");
+    (async()=>{ try { await api("POST","/api/admin/players",{name}); toast(name+" hinzugefügt. Schick den Link."); await poll(); render(); } catch(e){ toast(e.message || "Hat nicht geklappt."); } })();
+    return;
+  }
+  if (t.id==="leave"){ ui.leaveConfirm=true; return render(); }
+  if (t.id==="leaveNo"){ ui.leaveConfirm=false; return render(); }
+  if (t.id==="leaveYes"){
+    ui.leaveConfirm=false;
+    (async()=>{ try { await api("POST","/api/leave"); setToken(null); try{localStorage.removeItem("wa-cache")}catch(_){} S=null; me=null; others=[]; clearInterval(pollT); toast("Du bist ausgetreten."); bootApi(); } catch(e){ toast(e.message || "Hat nicht geklappt."); } })();
+    return;
+  }
   if (t.id==="logoutYes"){ ui.logoutConfirm=false; ui.showToken=false; setToken(null); try{localStorage.removeItem("wa-cache")}catch(_){} S=null; me=null; others=[]; clearInterval(pollT); bootApi(); return; }
   if (t.dataset.tab){ tab=t.dataset.tab; render(); window.scrollTo(0,0); return; }
   if (t.dataset.log){
