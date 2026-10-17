@@ -417,7 +417,9 @@ function renderLogin(slots){
   ${open.length ? `<div class="card stack"><div class="label">Neu hier?</div>
     <div class="field"><label class="label" for="onbName">Dein Name</label><input id="onbName" maxlength="24" autocomplete="nickname"></div>
     <div class="row">${open.map(s=>`<button class="btn grow" data-claim="${esc(s.id)}">Platz „${esc(s.name)}“ nehmen</button>`).join("")}</div>
-    <div class="muted">Jeder Platz kann nur einmal vergeben werden. Danach bekommst du deinen Zugangscode.</div></div>` : ""}
+    <div class="muted">Jeder Platz kann nur einmal vergeben werden. Danach bekommst du deinen Zugangscode.</div></div>` : `<div class="card stack"><div class="label">Neu hier?</div>
+    <div class="muted">Gerade ist kein Platz frei. Sag dem Admin Bescheid, dass er dir unter „Ich → Squad verwalten“ einen Platz anlegt. Danach lädst du diese Seite neu.</div>
+    <div><button class="btn ghost small" id="reloadSlots">Neu laden</button></div></div>`}
   <div class="card stack"><div class="label">Schon dabei?</div>
     <div class="field"><label class="label" for="onbCode">Zugangscode</label><input id="onbCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="wa_…"></div>
     <button class="btn ghost" id="onbLogin">Anmelden</button>
@@ -758,6 +760,7 @@ app.addEventListener("click", e => {
   const t = e.target.closest("button"); if(!t) return;
   if (t.dataset.claim) return doClaim(t.dataset.claim);
   if (t.id==="onbLogin") return doLogin();
+  if (t.id==="reloadSlots") return location.reload();
   if (!S) return;
   if (t.id==="showTok"){ ui.showToken=true; return render(); }
   if (t.id==="hideTok"){ ui.showToken=false; return render(); }
