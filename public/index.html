@@ -677,9 +677,10 @@ function squadAdmin(){
     return `<div class="prow"><span><b>${esc(p.name)}</b> <span class="muted">${status}</span></span>${actions}${warn}</div>`;
   }).join("");
   return `<h2>Squad verwalten</h2><div class="card">${rows || '<div class="muted">Lädt …</div>'}
-    <div class="hedit"><div class="label">Person hinzufügen</div>
+    ${allPlayers.length>=6 ? `<div class="hedit"><div class="muted">Alle 6 Plätze sind vergeben. Entferne erst jemanden, um einen neuen Platz anzulegen.</div></div>` : ""}
+    <div class="hedit" ${allPlayers.length>=6?"hidden":""}><div class="label">Person hinzufügen</div>
       <div class="row"><input class="grow" id="newP" placeholder="Name" maxlength="24" autocomplete="off" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px"><button class="btn" id="addP">Platz anlegen</button></div>
-      <div class="muted">Danach schickst du der Person den Link. Beim ersten Öffnen wählt sie ihren Platz und bekommt ihren Code.</div></div></div>`;
+      <div class="muted">Danach schickst du der Person den Link. Beim ersten Öffnen wählt sie ihren Platz und bekommt ihren Code. ${allPlayers.length}/6 Plätze belegt.</div></div></div>`;
 }
 
 function renderIch(){

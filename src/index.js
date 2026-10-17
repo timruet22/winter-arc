@@ -137,7 +137,7 @@ async function handleApi(req, env, path) {
     const name = cleanName(body.name);
     if (!name) return err(400, "name fehlt");
     const { n } = await env.DB.prepare("SELECT COUNT(*) AS n FROM players").first();
-    if (n >= 20) return err(400, "Maximal 20 Plätze");
+    if (n >= 6) return err(400, "Maximal 6 Plätze. Entferne erst jemanden.");
     const base = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "spieler";
     const id = base + "-" + Math.random().toString(36).slice(2, 6);
     await env.DB.prepare("INSERT INTO players (id, name) VALUES (?, ?)").bind(id, name).run();
